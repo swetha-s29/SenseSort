@@ -41,7 +41,7 @@ Open a new terminal, navigate to the frontend folder, and install Node modules.
 cd frontend
 npm install
 ```
-## 🏃‍♂️ How to Run
+##  How to Run
 You need to run the Backend and Frontend simultaneously in two separate terminals.
 **Terminal 1 (Backend)**:
 ```bash
