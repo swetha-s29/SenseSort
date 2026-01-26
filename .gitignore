@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+*.spec
+build/
+dist/
+
+# Node
+node_modules/
+dist/
+build/
+.DS_Store
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+
+# AI Artifacts
+.gemini/
+
+# Large Model Files
+*.pt

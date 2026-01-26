@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenseSort</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0a0a0a",
+                        surface: "#111827",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Alpine.js (Reactive Logic) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: white;
+        }
+
+        .glass-nav {
+            background: rgba(10, 10, 10, 0.5);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hero-bg {
+            background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 60%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .gradient-title {
+            background: linear-gradient(to right, #34d399, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* Bento Grid Card */
+        .bento-card {
+            border: 2px solid #4B5563;
+            background-color: #111827;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .bento-card:hover {
+            border-color: rgba(52, 211, 153, 0.5);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col selection:bg-emerald-500/30">
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-50 glass-nav h-16 flex items-center px-6 lg:px-8 justify-between"
+        x-data="{ connected: false }">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-emerald-500/10 rounded-lg">
+                <i data-lucide="leaf" class="w-6 h-6 text-emerald-400"></i>
+            </div>
+            <span class="text-xl font-bold gradient-text">Sense<span class="text-emerald-400">Sort</span></span>
+        </div>
+        <button @click="connected = !connected"
+            class="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg transition-all duration-300"
+            :class="connected ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'text-white bg-white/5 hover:bg-white/10 border-white/10'">
+            <span x-text="connected ? 'System Connected' : 'Connect System'"></span>
+            <div class="w-2 h-2 rounded-full" :class="connected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'"></div>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow pt-32 pb-20 px-4 w-full max-w-7xl mx-auto flex flex-col items-center"
+        x-data="wasteAnalyzer()">
+
+        <!-- Hero -->
+        <div class="text-center mb-16 relative">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] hero-bg -z-10 blur-3xl"></div>
+
+            <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-emerald-400 mb-8">
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                AI-Powered Waste Analytics
+            </div>
+
+            <h1 class="text-5xl md:text-7xl font-bold tracking-tight mb-8">
+                Revolutionizing <br>
+                <span class="gradient-title">Waste Management</span>
+            </h1>
+
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
+                Experience real-time segregation with our Dual-Brain AI. Instantly analyze plastic, glass, organic, and
+                more.
+            </p>
+        </div>
+
+        <!-- Error Alert -->
+        <div x-show="errorMessage" style="display: none;"
+            class="w-full max-w-2xl mb-8 p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-3 text-red-400">
+            <i data-lucide="alert-circle" class="w-6 h-6 flex-shrink-0"></i>
+            <p x-text="errorMessage"></p>
+        </div>
+
+        <!-- Demo / Bento Grid -->
+        <section class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- 1. Input Area -->
+            <div class="bento-card lg:col-span-1 min-h-[400px] relative overflow-hidden group"
+                x-data="{ mode: 'upload', stream: null }" @click.outside="stopCamera()">
+
+                <!-- Toggle Tabs -->
+                <div class="absolute top-4 left-0 right-0 flex justify-center gap-2 z-30" x-show="!imagePreview">
+                    <button @click="mode = 'upload'; stopCamera()"
+                        class="px-3 py-1 text-xs font-medium rounded-full transition-colors border"
+                        :class="mode === 'upload' ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-black/40 text-gray-400 border-gray-700 hover:border-gray-500'">
+                        Upload
+                    </button>
+                    <button @click="mode = 'camera'; startCamera()"
+                        class="px-3 py-1 text-xs font-medium rounded-full transition-colors border"
+                        :class="mode === 'camera' ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-black/40 text-gray-400 border-gray-700 hover:border-gray-500'">
+                        Camera
+                    </button>
+                </div>
+
+                <!-- UPLOAD MODE -->
+                <div class="absolute inset-0 cursor-pointer" x-show="mode === 'upload' && !imagePreview"
+                    @click="$refs.fileInput.click()" @drop.prevent="handleDrop($event)" @dragover.prevent>
+
+                    <input type="file" x-ref="fileInput" class="hidden" accept="image/*"
+                        @change="processImage($event.target.files[0])">
+
+                    <div class="flex flex-col items-center gap-4 text-center absolute inset-0 justify-center z-10">
+                        <div class="p-4 rounded-full bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
+                            <i data-lucide="upload" class="w-10 h-10 text-emerald-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white mb-2">Upload Waste Image</h3>
+                            <p class="text-gray-400 text-sm">Drag & drop or click to browse</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMERA MODE -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center bg-black"
+                    x-show="mode === 'camera' && !imagePreview">
+                    <video x-ref="video" autoplay playsinline class="w-full h-full object-cover opacity-80"></video>
+
+                    <button @click="capturePhoto()"
+                        class="absolute bottom-8 p-4 bg-white rounded-full hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20 z-20">
+                        <div class="w-4 h-4 rounded-full bg-emerald-500"></div>
+                    </button>
+
+                    <p class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-500 text-sm"
+                        x-show="!stream">
+                        Starting Camera...
+                    </p>
+                </div>
+
+                <!-- PREVIEW / RESULT MODE -->
+                <div class="absolute inset-0 w-full h-full z-20 bg-gray-900" x-show="imagePreview">
+                    <img :src="imagePreview" class="w-full h-full object-cover">
+
+                    <button @click="reset()"
+                        class="absolute top-4 right-4 p-2 bg-black/60 rounded-full hover:bg-black/80 text-white backdrop-blur-md transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        x-show="!loading">
+                        <p
+                            class="px-4 py-2 bg-black/60 rounded-full text-sm backdrop-blur-md text-emerald-400 flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i> Analysis Complete
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Loading Overlay -->
+                <div class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30 backdrop-blur-sm"
+                    x-show="loading">
+                    <i data-lucide="loader-2" class="w-12 h-12 text-emerald-500 animate-spin mb-4"></i>
+                    <p class="text-emerald-400 font-medium animate-pulse">Analyzing...</p>
+                </div>
+            </div>
+
+            <!-- Results Grid -->
+            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- Recommendation -->
+                <div
+                    class="bento-card md:col-span-2 !py-6 bg-gradient-to-r from-gray-900 to-gray-800 flex-row items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-base font-medium mb-1 uppercase tracking-wider">Recommended Action
+                        </p>
+                        <h2 class="text-3xl font-bold text-white"
+                            x-text="result ? result.recommendation : 'Waiting for Input...'"></h2>
+                    </div>
+                    <div class="text-5xl animate-bounce-slow" x-text="getEmoji()">👋</div>
+                </div>
+
+                <!-- Confidence -->
+                <div class="bento-card">
+                    <p class="text-gray-400 text-base font-medium mb-2">Confidence</p>
+                    <div class="flex items-end gap-2">
+                        <span class="text-4xl font-bold" :class="{
+                                  'text-emerald-400': result?.accuracy === 'High',
+                                  'text-yellow-400': result?.accuracy === 'Medium',
+                                  'text-red-400': result?.accuracy === 'Low',
+                                  'text-gray-500': !result
+                              }" x-text="result?.accuracy || '--'"></span>
+                        <span class="text-sm text-gray-500 mb-2"
+                            x-text="result ? Math.round(result.details.confidence * 100) + '%' : ''"></span>
+                    </div>
+                </div>
+
+                <!-- Condition -->
+                <div class="bento-card">
+                    <p class="text-gray-400 text-base font-medium mb-2">Condition</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-4xl font-bold"
+                            :class="result?.condition === 'Clean' ? 'text-emerald-400' : 'text-amber-500'"
+                            x-text="result?.condition || '--'"></span>
+                        <span class="text-2xl"
+                            x-text="result?.condition === 'Clean' ? '✨' : (result ? '⚠️' : '')"></span>
+                    </div>
+                </div>
+
+                <!-- Recyclable -->
+                <div class="bento-card flex-row items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm font-medium">Recyclable</p>
+                        <p class="text-2xl font-bold mt-1"
+                            :class="result?.recyclable === 'Yes' ? 'text-emerald-400' : 'text-gray-500'"
+                            x-text="result?.recyclable || '--'"></p>
+                    </div>
+                    <i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-500"
+                        x-show="result?.recyclable === 'Yes'"></i>
+                    <i data-lucide="x-circle" class="w-8 h-8 text-gray-600"
+                        x-show="result && result?.recyclable !== 'Yes'"></i>
+                </div>
+
+                <!-- Biodegradable -->
+                <div class="bento-card flex-row items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm font-medium">Biodegradable</p>
+                        <p class="text-2xl font-bold mt-1"
+                            :class="result?.biodegradable === 'Yes' ? 'text-emerald-400' : 'text-gray-500'"
+                            x-text="result?.biodegradable || '--'"></p>
+                    </div>
+                    <i data-lucide="leaf" class="w-8 h-8 text-emerald-500" x-show="result?.biodegradable === 'Yes'"></i>
+                    <i data-lucide="x-circle" class="w-8 h-8 text-gray-600"
+                        x-show="result && result?.biodegradable !== 'Yes'"></i>
+                </div>
+
+                <!-- Analysis -->
+                <div class="bento-card md:col-span-2" style="border-color: #7C3AED;">
+                    <p class="text-purple-400 text-xs font-bold uppercase tracking-widest mb-2">AI Analysis</p>
+                    <p class="text-gray-300 text-lg leading-relaxed"
+                        x-text="result?.reasoning || 'Upload an image to see the AI analysis logic.'"></p>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="w-full border-t border-white/10 bg-black/20 py-8 mt-auto text-center">
+        <p class="text-gray-500 text-sm">Powered by YOLOv8 & Dual-Brain AI Logic</p>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        lucide.createIcons();
+
+        function wasteAnalyzer() {
+            return {
+                imagePreview: null,
+                loading: false,
+                result: null,
+                errorMessage: null,
+
+                handleDrop(e) {
+                    const file = e.dataTransfer.files[0];
+                    if (file) this.processImage(file);
+                },
+
+                async startCamera() {
+                    if (this.stream) return; // Already running
+                    try {
+                        this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                        this.$refs.video.srcObject = this.stream;
+                    } catch (err) {
+                        console.error("Camera Error:", err);
+                        alert("Could not access camera. Please allow permissions.");
+                        this.mode = 'upload';
+                    }
+                },
+
+                stopCamera() {
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(track => track.stop());
+                        this.stream = null;
+                        this.$refs.video.srcObject = null;
+                    }
+                },
+
+                capturePhoto() {
+                    const canvas = document.createElement('canvas');
+                    const video = this.$refs.video;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+
+                    canvas.toBlob(blob => {
+                        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+                        this.processImage(file);
+                        this.stopCamera();
+                    }, 'image/jpeg');
+                },
+
+                reset() {
+                    this.imagePreview = null;
+                    this.result = null;
+                    this.errorMessage = null;
+                    this.stopCamera();
+                    // Reset tab to upload or keep camera? Let's just reset state.
+                },
+
+                async processImage(file) {
+                    this.imagePreview = URL.createObjectURL(file);
+                    this.loading = true;
+                    this.result = null;
+                    this.errorMessage = null;
+
+                    const formData = new FormData();
+                    formData.append('image', file);
+
+                    try {
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Server Error');
+                        }
+
+                        this.result = data;
+                        setTimeout(() => lucide.createIcons(), 100);
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.errorMessage = error.message;
+                        alert('Error: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                getEmoji() {
+                    const rec = this.result?.recommendation || "";
+                    if (rec.includes("Blue")) return "♻️";
+                    if (rec.includes("Green")) return "🌱";
+                    if (rec.includes("Red")) return "🔋";
+                    if (rec.includes("Black")) return "🗑️";
+                    return "👋";
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
