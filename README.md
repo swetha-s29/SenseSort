@@ -72,8 +72,4 @@ npm run dev
 ```
 *The application should automatically open in your browser at `http://localhost:5173`*
 
-## 📜 License
-This project is open-source and available under the MIT License.
-
----
 Built with 💚 for a cleaner future.
